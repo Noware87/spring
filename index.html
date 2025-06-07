@@ -8,7 +8,7 @@
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      margin: 20px 0 0 0;
+      margin: 20px 0 0 0; /* Visas från vänster */
     }
     #setup div, #setup h2 {
       margin: 10px 0;
@@ -22,7 +22,8 @@
       display: grid;
       grid-gap: 5px;
       margin-top: 20px;
-      justify-items: start;
+      grid-auto-flow: row;
+      justify-items: start; /* Alla celler syns från vänster */
       align-items: start;
     }
     .cell {
@@ -35,11 +36,22 @@
       position: absolute;
       top: 0;
       left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
     }
     .piece img {
       width: 100px;
       height: 100px;
       border-radius: 50%;
+    }
+    .piece span {
+      font-weight: bold;
+      margin-top: 4px;
+      font-size: 1em;
+      background: rgba(255,255,255,0.7);
+      padding: 2px;
+      border-radius: 4px;
     }
     #status {
       margin-top: 10px;
@@ -75,14 +87,13 @@
     }
     #winnerOverlay button {
       margin-top: 20px;
-      padding: 10px 16px;
     }
   </style>
 </head>
 <body>
-  <h1>Brickloppet</h1>
+  <h1>Spring tävling</h1>
   <div id="setup">
-    <h2>Välj vilka hästar som ska delta (minst 2)</h2>
+    <h2>Välj vem som ska delta  (minst 2)</h2>
     <div>
       <label><input type="checkbox" value="Nico" class="horseCheckbox"> Nico</label>
       <label><input type="checkbox" value="Neo" class="horseCheckbox"> Neo</label>
@@ -133,7 +144,10 @@
       startRace();
     });
 
-    restartBtn.addEventListener('click', () => resetRace());
+    restartBtn.addEventListener('click', () => {
+      resetRace();
+    });
+
     winnerBtn.addEventListener('click', () => {
       winnerOverlay.style.display = 'none';
       resetRace();
@@ -171,7 +185,10 @@
         const img = document.createElement('img');
         img.src = `${participants[r]}.png`;
         img.alt = participants[r];
+        const nameTag = document.createElement('span');
+        nameTag.textContent = participants[r];
         piece.appendChild(img);
+        piece.appendChild(nameTag);
         cell.appendChild(piece);
       });
     }
@@ -183,7 +200,9 @@
         positions[idx]++;
         updateBoard();
         const winnerIdx = positions.findIndex(p => p >= cellsCount - 1);
-        if (winnerIdx !== -1) endRace(winnerIdx);
+        if (winnerIdx !== -1) {
+          endRace(winnerIdx);
+        }
       }, 500);
     }
 
