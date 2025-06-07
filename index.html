@@ -39,7 +39,7 @@
     .piece img {
       width: 100px;
       height: 100px;
-      border-radius: 50%;
+      border-radius: 0; /* Ingen rundning */
     }
     #status {
       margin-top: 20px;
@@ -57,7 +57,7 @@
     .result-item img {
       width: 100px;
       height: 100px;
-      border-radius: 50%;
+      border-radius: 0; /* Ingen rundning */
       display: block;
       margin: 0 auto;
     }
@@ -193,9 +193,7 @@
             finishOrder.push(idx);
           }
         }
-        // så fort alla utom en är klara, avsluta
         if (finishOrder.length === participants.length - 1) {
-          // lägg till sista deltagaren
           const last = participants
             .map((_, i) => i)
             .find(i => !finishOrder.includes(i));
