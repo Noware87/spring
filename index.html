@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Brickloppet</title>
+  <title>SPRING SÅ FORT DU KAN</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      margin: 20px 0 0 0;
+      margin: 0;
     }
-    #setup div, #setup h2 {
+    #setup h2, #setup div {
       margin: 10px 0;
     }
-    button {
+    button, select {
       padding: 10px 16px;
       margin-top: 10px;
       font-size: 1em;
@@ -42,52 +42,59 @@
       border-radius: 50%;
     }
     #status {
-      margin-top: 10px;
-      font-size: 1.2em;
-    }
-    #winnerOverlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-    #winnerOverlay img {
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      border: 5px solid #fff;
-    }
-    #winnerOverlay span {
-      color: #fff;
-      font-size: 2em;
-      margin-top: 15px;
-      background: rgba(0,0,0,0.5);
-      padding: 8px 12px;
-      border-radius: 6px;
-    }
-    #winnerOverlay button {
       margin-top: 20px;
-      padding: 10px 16px;
+      font-size: 1.2em;
+      white-space: pre-line;
+    }
+    #results {
+      margin-top: 20px;
+      display: flex;
+      gap: 20px;
+    }
+    .result-item {
+      text-align: center;
+    }
+    .result-item img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      display: block;
+      margin: 0 auto;
+    }
+    .result-item span {
+      display: block;
+      margin-top: 8px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>Brickloppet</h1>
+  <h1>SPRING SÅ FORT DU KAN</h1>
+
   <div id="setup">
-    <h2>Välj vilka hästar som ska delta (minst 2)</h2>
+    <h2>Välj vem som ska springa (minst 2)</h2>
     <div>
       <label><input type="checkbox" value="Nico" class="horseCheckbox"> Nico</label>
       <label><input type="checkbox" value="Neo" class="horseCheckbox"> Neo</label>
       <label><input type="checkbox" value="Angelica" class="horseCheckbox"> Angelica</label>
       <label><input type="checkbox" value="Nima" class="horseCheckbox"> Nima</label>
+    </div>
+    <div>
+      <label>Antal rutor:
+        <select id="rutorSelect">
+          <option value="10">10</option>
+          <option value="15">15</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label>Hastighet:
+        <select id="speedSelect">
+          <option value="500">Normal</option>
+          <option value="800">Långsam</option>
+          <option value="1200">Mycket långsam</option>
+        </select>
+      </label>
     </div>
     <button id="startBtn">Starta lopp</button>
   </div>
@@ -98,17 +105,13 @@
     <button id="restartBtn" style="display:none;">Spela igen</button>
   </div>
 
-  <div id="winnerOverlay">
-    <img id="winnerImg" src="" alt="Vinnare">
-    <span id="winnerName"></span>
-    <button id="winnerBtn">Spela igen</button>
-  </div>
+  <div id="results" style="display:none;"></div>
 
   <script>
-    const cellsCount = 20;
-    const defaultImg = 'https://via.placeholder.com/100?text=Bild';
+    let cellsCount, speedMs;
     let participants = [];
     let positions = [];
+    let finishOrder = [];
     let intervalId;
 
     const setupDiv = document.getElementById('setup');
@@ -116,46 +119,50 @@
     const boardDiv = document.getElementById('board');
     const statusDiv = document.getElementById('status');
     const restartBtn = document.getElementById('restartBtn');
+    const resultsDiv = document.getElementById('results');
     const startBtn = document.getElementById('startBtn');
-    const winnerOverlay = document.getElementById('winnerOverlay');
-    const winnerImg = document.getElementById('winnerImg');
-    const winnerName = document.getElementById('winnerName');
-    const winnerBtn = document.getElementById('winnerBtn');
 
     startBtn.addEventListener('click', () => {
-      const checkboxes = document.querySelectorAll('.horseCheckbox:checked');
-      if (checkboxes.length < 2) {
-        return alert('Välj minst 2 hästar.');
+      const checked = document.querySelectorAll('.horseCheckbox:checked');
+      if (checked.length < 2) {
+        alert('Välj minst 2 deltagare.');
+        return;
       }
-      participants = Array.from(checkboxes).map(cb => cb.value);
+      participants = Array.from(checked).map(cb => cb.value);
+      cellsCount = parseInt(document.getElementById('rutorSelect').value, 10);
+      speedMs = parseInt(document.getElementById('speedSelect').value, 10);
       setupDiv.style.display = 'none';
       gameDiv.style.display = 'block';
+      resultsDiv.style.display = 'none';
+      restartBtn.style.display = 'none';
+      statusDiv.textContent = '';
       initGame();
       startRace();
     });
 
-    restartBtn.addEventListener('click', () => resetRace());
-    winnerBtn.addEventListener('click', () => {
-      winnerOverlay.style.display = 'none';
-      resetRace();
+    restartBtn.addEventListener('click', () => {
+      resultsDiv.style.display = 'none';
+      statusDiv.textContent = '';
+      restartBtn.style.display = 'none';
+      initGame();
+      startRace();
     });
 
     function initGame() {
       positions = Array(participants.length).fill(0);
+      finishOrder = [];
       boardDiv.style.gridTemplateRows = `repeat(${participants.length}, 120px)`;
       boardDiv.style.gridTemplateColumns = `repeat(${cellsCount}, 120px)`;
       boardDiv.innerHTML = '';
-      for (let r = 0; r < participants.length; r++) {
+      participants.forEach((_, r) => {
         for (let c = 0; c < cellsCount; c++) {
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.id = `cell-${r}-${c}`;
           boardDiv.appendChild(cell);
         }
-      }
+      });
       updateBoard();
-      statusDiv.textContent = '';
-      restartBtn.style.display = 'none';
     }
 
     function updateBoard() {
@@ -170,10 +177,9 @@
         const piece = document.createElement('div');
         piece.className = 'piece';
         const img = document.createElement('img');
-        img.src = `${participants[r]}.png`;
-        img.alt = participants[r];
-        piece.appendChild(img);
+        img.src = `${participants[r].toLowerCase()}.png`;
         cell.appendChild(piece);
+        piece.appendChild(img);
       });
     }
 
@@ -181,25 +187,43 @@
       statusDiv.textContent = 'Loppet är igång...';
       intervalId = setInterval(() => {
         const idx = Math.floor(Math.random() * participants.length);
-        positions[idx]++;
+        if (!finishOrder.includes(idx)) {
+          positions[idx]++;
+          if (positions[idx] >= cellsCount - 1) {
+            finishOrder.push(idx);
+          }
+        }
+        // så fort alla utom en är klara, avsluta
+        if (finishOrder.length === participants.length - 1) {
+          // lägg till sista deltagaren
+          const last = participants
+            .map((_, i) => i)
+            .find(i => !finishOrder.includes(i));
+          finishOrder.push(last);
+          clearInterval(intervalId);
+          showResults();
+          return;
+        }
         updateBoard();
-        const winnerIdx = positions.findIndex(p => p >= cellsCount - 1);
-        if (winnerIdx !== -1) endRace(winnerIdx);
-      }, 500);
+      }, speedMs);
     }
 
-    function endRace(winnerIdx) {
-      clearInterval(intervalId);
-      statusDiv.textContent = `${participants[winnerIdx]} vann!`;
-      winnerImg.src = `${participants[winnerIdx]}.png`;
-      winnerName.textContent = participants[winnerIdx];
-      winnerOverlay.style.display = 'flex';
-    }
-
-    function resetRace() {
-      clearInterval(intervalId);
-      initGame();
-      startRace();
+    function showResults() {
+      statusDiv.textContent = '';
+      resultsDiv.innerHTML = '';
+      resultsDiv.style.display = 'flex';
+      finishOrder.forEach((i, rank) => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        const img = document.createElement('img');
+        img.src = `${participants[i].toLowerCase()}.png`;
+        const span = document.createElement('span');
+        span.textContent = `${rank + 1}ᵃ: ${participants[i]}`;
+        div.appendChild(img);
+        div.appendChild(span);
+        resultsDiv.appendChild(div);
+      });
+      restartBtn.style.display = 'inline-block';
     }
   </script>
 </body>
